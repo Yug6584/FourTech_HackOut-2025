@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Forum - Terragen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-white">
+
+    <header class="bg-header-gradient shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <img src="/static/logo.jpg" alt="Terragen Logo" class="h-12">
+                    <a href="{{ url_for('index_bp.index') }}" class="text-2xl font-bold text-white font-heading">Terragen</a>
+                </div>
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="{{ url_for('index_bp.index') }}" class="nav-link-light">Home</a>
+                    <a href="{{ url_for('map_bp.map') }}" class="nav-link-light">Map</a>
+                    <a href="{{ url_for('community_bp.community') }}" class="nav-link-light active">Community</a>
+                    <a href="{{ url_for('suggestions_bp.suggestions') }}" class="nav-link-light">Suggestions</a>
+                </nav>
+                <ul class="hidden md:flex items-center space-x-2">
+            {% if session.get('logged_in') %}
+                <li class="relative">
+                    <img id="user-avatar" src="{{ session.get('user_picture') or '/static/default-user.png' }}" 
+                         alt="User" class="w-10 h-10 rounded-full cursor-pointer">
+                    <div id="dropdown-menu" class="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg hidden">
+                        <a href="{{ url_for('auth_bp.logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+                    </div>
+                </li>
+            {% else %}
+                <li><a href="{{ url_for('login_bp.login') }}" class="btn btn-secondary">Sign In</a></li>
+                <li><a href="{{ url_for('signup_bp.signup') }}" class="btn btn-primary-outline">Sign Up</a></li>
+            {% endif %}
+        </ul>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto py-12 px-6">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold font-heading text-charcoal">Community</h1>
+            <p class="text-lg text-gray-600 mt-2">Connect with experts, policymakers, and investors shaping the future of green hydrogen.</p>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} p-3 rounded-md mb-2">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="grid lg:grid-cols-12 gap-8">
+            <!-- Left/Main Column -->
+            <div class="lg:col-span-8">
+                <!-- Search Communities -->
+                <form method="get" action="{{ url_for('community_bp.community') }}" class="relative mb-6 flex">
+                    <input type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Search communities..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md">
+                    <button type="submit" class="ml-2 btn btn-primary px-4 py-2">Search</button>
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </form>
+
+                <!-- List of Communities -->
+                <div>
+                    {% for community in communities %}
+                    <div class="bg-white p-6 rounded-lg border border-gray-200 flex items-center justify-between mb-4">
+                        <div class="flex-1">
+                            <h3 class="font-bold text-lg text-charcoal">{{ community.name }}</h3>
+                            <p class="text-gray-600">{{ community.description }}</p>
+                            <p class="text-sm text-gray-500 mt-2">Members: {{ community.member_count if community.member_count else 0 }}</p>
+                        </div>
+                        {% if session.user_id %}
+                        <form method="post" action="{{ url_for('community_bp.join_community_route') }}">
+                            <input type="hidden" name="community_id" value="{{ community.id }}">
+                            <button type="submit" class="btn btn-primary whitespace-nowrap">Join Community</button>
+                        </form>
+                        {% else %}
+                        <a href="{{ url_for('auth_bp.login') }}" class="btn btn-primary whitespace-nowrap">Login to Join</a>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500">No communities found.</p>
+                    {% endfor %}
+                </div>
+
+                <!-- Post Form (shows after joining a community) -->
+                {% if joined_community and session.user_id %}
+                <div class="bg-white p-6 rounded-lg border border-gray-200 mt-8">
+                    <h2 class="font-bold text-xl mb-4">Create a Post in {{ joined_community.name }}</h2>
+                    <form method="post" action="{{ url_for('community_bp.create_post_route') }}" enctype="multipart/form-data">
+                        <input type="hidden" name="community_id" value="{{ joined_community.id }}">
+                        <textarea name="content" class="w-full border border-gray-300 rounded px-3 py-2 mb-2" placeholder="Share your thoughts, questions, or insights..." required rows="4"></textarea>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Attach a file (optional):</label>
+                            <input type="file" name="file" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-earth-blue file:text-white hover:file:bg-earth-blue-dark">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Post to Community</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                <!-- List of Posts -->
+                <div class="mt-8">
+                    <h2 class="font-bold text-xl mb-4">Recent Posts</h2>
+                    {% for post in posts %}
+                    <div class="bg-white p-6 rounded-lg border border-gray-200 flex items-start space-x-4 mb-4">
+                        <div class="w-12 h-12 bg-earth-blue text-white flex items-center justify-center rounded-full font-bold text-lg flex-shrink-0">
+                            {{ post.username[0]|upper if post.username else 'U' }}
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-lg text-charcoal">{{ post.username or 'Unknown User' }}</h3>
+                                <span class="text-sm text-gray-500">{{ post.created_at }}</span>
+                            </div>
+                            <p class="mt-2 text-gray-700 whitespace-pre-wrap">{{ post.content }}</p>
+                            {% if post.filename and post.filepath %}
+                            <div class="mt-3">
+                                <a href="{{ url_for('static', filename=post.filepath) }}" 
+                                   class="inline-flex items-center text-earth-blue hover:text-earth-blue-dark underline"
+                                   download>
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    {{ post.filename }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="bg-gray-50 p-8 rounded-lg text-center">
+                        <p class="text-gray-500 text-lg">No posts yet in this community.</p>
+                        {% if joined_community %}
+                        <p class="text-gray-400 mt-2">Be the first to share something!</p>
+                        {% else %}
+                        <p class="text-gray-400 mt-2">Join a community to see and create posts.</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="lg:col-span-4">
+                {% if not joined_community and session.user_id %}
+                <div class="bg-earth-blue text-white p-6 rounded-lg mb-6">
+                    <h3 class="font-bold text-lg mb-2">Join a Community</h3>
+                    <p class="text-sm mb-4">Connect with other professionals in the green hydrogen industry. Share knowledge, ask questions, and collaborate.</p>
+                    <a href="#communities" class="btn btn-secondary w-full text-center bg-white text-earth-blue hover:bg-gray-100">Browse Communities</a>
+                </div>
+                {% elif not session.user_id %}
+                <div class="bg-earth-blue text-white p-6 rounded-lg mb-6">
+                    <h3 class="font-bold text-lg mb-2">Join the Conversation</h3>
+                    <p class="text-sm mb-4">Sign in to access communities, connect with experts, and participate in discussions.</p>
+                    <a href="{{ url_for('auth_bp.login') }}" class="btn btn-secondary w-full text-center bg-white text-earth-blue hover:bg-gray-100">Sign In</a>
+                </div>
+                {% endif %}
+
+                <!-- In the right sidebar section, replace the active members section: -->
+<div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+    <div class="flex items-center mb-6">
+        <div class="text-3xl mr-4">🏢</div>  <!-- Changed icon to building -->
+        <div>
+            <p class="text-2xl font-bold font-heading text-earth-blue">{{ total_communities }}</p>
+            <p class="text-sm text-gray-500">Total Communities</p>  <!-- Changed text -->
+        </div>
+    </div>
+    <div class="flex items-center">
+        <div class="text-3xl mr-4">📈</div>
+        <div>
+            <p class="text-2xl font-bold font-heading text-charcoal">{{ total_posts }}</p>
+            <p class="text-sm text-gray-500">Total Posts</p>
+        </div>
+    </div>
+</div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/main.js"></script>
+    <style>
+        .alert {
+            border: 1px solid transparent;
+            border-radius: 0.375rem;
+            padding: 0.75rem 1rem;
+        }
+        .alert-success {
+            color: #065f46;
+            background-color: #d1fae5;
+            border-color: #a7f3d0;
+        }
+        .alert-danger {
+            color: #7f1d1d;
+            background-color: #fee2e2;
+            border-color: #fecaca;
+        }
+        .alert-warning {
+            color: #78350f;
+            background-color: #fef3c7;
+            border-color: #fde68a;
+        }
+        .alert-info {
+            color: #1e40af;
+            background-color: #dbeafe;
+            border-color: #bfdbfe;
+        }
+    </style>
+</body>
+</html>
