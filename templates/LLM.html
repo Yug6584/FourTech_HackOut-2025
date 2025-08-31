@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenRouter LLM Chat</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-2xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">OpenRouter Chat</h1>
+        
+        <div id="chat-box" class="h-96 overflow-y-auto mb-4 p-4 border border-gray-200 rounded-lg bg-gray-50 flex flex-col space-y-4">
+            </div>
+
+        <form id="chat-form" class="flex items-center space-x-4">
+            <input type="text" id="prompt-input" placeholder="Type your message..." class="flex-1 p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <button type="submit" class="bg-indigo-600 text-white p-3 rounded-xl font-semibold shadow-lg hover:bg-indigo-700 transition duration-300 ease-in-out">
+                Send
+            </button>
+        </form>
+
+        <div class="flex justify-between items-center mt-4">
+            <div class="flex items-center">
+                <input type="checkbox" id="websearch-toggle" class="form-checkbox h-4 w-4 text-indigo-600 rounded">
+                <label for="websearch-toggle" class="ml-2 text-gray-700">Enable Web Search</label>
+            </div>
+            <button id="clear-chat-btn" class="text-sm text-gray-500 hover:text-red-500 transition duration-300">
+                Clear Chat
+            </button>
+        </div>
+        
+        <div id="loading-indicator" class="mt-4 text-center text-gray-500 hidden">
+            <svg class="animate-spin h-5 w-5 mr-3 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Generating response...
+        </div>
+    </div>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const promptInput = document.getElementById('prompt-input');
+        const chatBox = document.getElementById('chat-box');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const websearchToggle = document.getElementById('websearch-toggle');
+        const clearChatBtn = document.getElementById('clear-chat-btn');
+
+        // Store the conversation history as an array of message objects
+        let messageHistory = [];
+
+        // Set options for marked to use highlight.js
+        marked.setOptions({
+          highlight: function(code, lang) {
+            const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+            return hljs.highlight(code, { language }).value;
+          }
+        });
+
+        // Handle incoming report data from parent window
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'REPORT_DATA') {
+                const reportData = event.data.data;
+                
+                // Format the report data into a prompt
+                const prompt = `Generate a detailed green hydrogen production feasibility report based on the following analysis:
+                
+Location: ${reportData.location}
+Overall Feasibility: ${reportData.feasibility}
+Recommended Technology: ${reportData.recommended_technology}
+
+Suitability Scores:
+- Solar Electrolysis: ${reportData.suitability_scores.solar_electrolysis}
+- Wind Electrolysis: ${reportData.suitability_scores.wind_electrolysis}
+- Thermal with CCS: ${reportData.suitability_scores.thermal_with_ccs}
+
+Regional Advantages:
+${reportData.regional_advantages.map(adv => `- ${adv}`).join('\n')}
+
+Please provide a comprehensive analysis including:
+1. Executive summary
+2. Detailed technology comparison
+3. Economic viability assessment
+4. Infrastructure requirements
+5. Environmental impact analysis
+6. Implementation timeline
+7. Risk assessment
+8. Recommendations`;
+
+                // Auto-fill the prompt and submit
+                promptInput.value = prompt;
+                
+                // Auto-enable web search for comprehensive results
+                websearchToggle.checked = true;
+                
+                // Auto-submit the form after a short delay
+                setTimeout(() => {
+                    chatForm.dispatchEvent(new Event('submit'));
+                }, 1000);
+            }
+        });
+
+        // Also add this to handle the initial load with report data
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if we have report data in session storage (alternative approach)
+            const reportData = sessionStorage.getItem('currentReport');
+            if (reportData) {
+                sessionStorage.removeItem('currentReport');
+                // Process the report data similar to above
+                const parsedData = JSON.parse(reportData);
+                const event = new MessageEvent('message', {
+                    data: {
+                        type: 'REPORT_DATA',
+                        data: parsedData
+                    }
+                });
+                window.dispatchEvent(event);
+            }
+        });
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const prompt = promptInput.value.trim();
+            if (prompt === '') return;
+
+            // Add user message to history
+            const userMessage = { role: 'user', content: prompt };
+            messageHistory.push(userMessage);
+
+            // Display user message
+            appendMessage(userMessage.content, 'user');
+            promptInput.value = '';
+            
+            // Show loading indicator
+            loadingIndicator.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        messages: messageHistory,
+                        websearch_enabled: websearchToggle.checked
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // Add bot message to history
+                    const botMessage = { role: 'assistant', content: data.response };
+                    messageHistory.push(botMessage);
+                    appendMessage(botMessage.content, 'bot');
+                } else {
+                    appendMessage(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                appendMessage(`Error: Could not connect to the server. ${error}`, 'error');
+            } finally {
+                // Hide loading indicator
+                loadingIndicator.classList.add('hidden');
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        });
+
+        clearChatBtn.addEventListener('click', () => {
+            messageHistory = [];
+            chatBox.innerHTML = '';
+            appendMessage("Chat history cleared. Start a new conversation!", "system");
+        });
+        
+        // Initial welcome message
+        appendMessage("Hello! I am your AI assistant. I can render complex formatting. Here are some examples:\n\n**Markdown Features:**\n*   *Italics*, **bold**, and `inline code`.\n*   Lists of items.\n*   [Links](https://www.google.com)\n\n**Code Blocks:**\n```python\nimport os\n\ndef hello():\n    print(\"Hello, World!\")\n```\n\n**Tables:**\n| Feature         | Status | Notes                               |\n|-----------------|:------:|-----------------------------------|\n| Markdown        |   ✅   | Fully supported.                  |\n| Code Highlighting |   ✅   | Using highlight.js.               |\n| Math Equations  |   ✅   | Using MathJax for LaTeX.          |\n\n**Math Equations:**\n\nI can render both inline and block-level math equations.\n\nInline: $E = mc^2$\n\nBlock:\n\n$\sum_{i=1}^{n} i = \frac{n(n+1)}{2}$`\n\nLet me know how I can help you!", "system");
+
+        function appendMessage(text, sender) {
+            const messageElement = document.createElement('div');
+            
+            if (sender === 'user') {
+                messageElement.classList.add('p-3', 'rounded-xl', 'max-w-[85%]', 'whitespace-pre-wrap', 'bg-indigo-500', 'text-white', 'self-end', 'rounded-br-none');
+                messageElement.textContent = text;
+            } else if (sender === 'bot') {
+                messageElement.classList.add('p-3', 'rounded-xl', 'max-w-[85%]', 'bg-gray-200', 'text-gray-800', 'self-start', 'rounded-bl-none', 'prose');
+                messageElement.innerHTML = marked.parse(text);
+            } else if (sender === 'error') {
+                messageElement.classList.add('p-3', 'rounded-xl', 'max-w-[85%]', 'whitespace-pre-wrap', 'bg-red-200', 'text-red-700', 'self-start');
+                messageElement.textContent = text;
+            } else if (sender === 'system') {
+                messageElement.classList.add('text-gray-500', 'italic', 'text-center', 'w-full', 'self-center', 'max-w-[85%]');
+                messageElement.textContent = text;
+            }
+
+            chatBox.appendChild(messageElement);
+            
+            // Highlight code blocks
+            messageElement.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+
+            // Typeset mathematical formulas
+            MathJax.typesetPromise([messageElement]);
+        }
+    </script>
+</body>
+</html>

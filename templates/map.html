@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Analyzer - Terragen</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .ai-typing {
+            display: inline-block;
+            position: relative;
+        }
+        .ai-typing::after {
+            content: "";
+            position: absolute;
+            width: 4px;
+            height: 100%;
+            background-color: #4F46E5;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .report-container {
+            transition: all 0.3s ease;
+        }
+        .generating-report {
+            background: linear-gradient(90deg, #f0f9ff, #e0f2fe, #f0f9ff);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .scroll-container {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body class="bg-light-grey text-charcoal font-body">
+
+    <header class="sticky top-0 z-50 bg-header-gradient shadow-sm">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+        <a href="{{ url_for('index_bp.index') }}" class="flex items-center space-x-2">
+            <img src="/static/logo.jpg" alt="Terragen Logo" class="h-12">
+            <span class="font-heading text-2xl font-bold text-white">Terragen</span>
+        </a>
+
+        <!-- Desktop Menu -->
+        <nav class="hidden md:flex items-center space-x-8">
+                <a href="{{ url_for('index_bp.index') }}" class="nav-link-light active">Home</a>
+                <a href="{{ url_for('map_bp.map') }}" class="nav-link-light">Map</a>
+                <a href="{{ url_for('community_bp.community') }}" class="nav-link-light">Community</a>
+                <a href="{{ url_for('suggestions_bp.suggestions') }}" class="nav-link-light">Suggestions</a>
+            </nav>
+
+        <!-- User / Auth Buttons -->
+        <ul class="hidden md:flex items-center space-x-2">
+            {% if session.get('logged_in') %}
+                <li class="relative">
+                    <img id="user-avatar" src="{{ session.get('user_picture') or '/static/default-user.png' }}" 
+                         alt="User" class="w-10 h-10 rounded-full cursor-pointer">
+                    <div id="dropdown-menu" class="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg hidden">
+                        <a href="{{ url_for('auth_bp.logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+                    </div>
+                </li>
+            {% else %}
+                <li><a href="{{ url_for('login_bp.login') }}" class="btn btn-secondary">Sign In</a></li>
+                <li><a href="{{ url_for('signup_bp.signup') }}" class="btn btn-primary-outline">Sign Up</a></li>
+            {% endif %}
+        </ul>
+
+        <!-- Mobile Menu Button -->
+        <button id="mobile-menu-button" class="md:hidden text-2xl">☰</button>
+    </nav>
+    </header>
+
+    <main class="flex flex-col min-h-screen">
+        <!-- Map Section (Top) -->
+        <div class="w-full h-[60vh] relative">
+            <div id="map" class="w-full h-full"></div>
+            <div id="map-prompt" class="absolute inset-0 flex flex-col justify-center items-center bg-gray-100/50 backdrop-blur-sm z-10 pointer-events-none">
+                <img src="https://img.icons8.com/pastel-glyph/64/0B3C5D/map--v1.png" alt="Map Icon" class="mb-4"/>
+                <h3 class="font-heading text-2xl font-semibold text-charcoal-dark">Interactive Map</h3>
+                <p class="text-gray-600">Click anywhere to analyze hydrogen production potential</p>
+            </div>
+        </div>
+
+        <!-- Dashboard Section (Below Map) -->
+        <div id="dashboard" class="w-full bg-off-white p-6 scroll-container">
+            <!-- Search Bar (Always visible at top of dashboard) -->
+            <div class="max-w-4xl mx-auto mb-8">
+                <div class="relative">
+                    <input type="text" id="location-search-input" placeholder="Search for a city or region..." class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-earth-blue text-lg">
+                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
+
+            <div id="dashboard-initial-prompt" class="max-w-4xl mx-auto text-center py-12">
+                <img src="/static/icons8-world-map-96.png" alt="Map Marker Icon" class="mx-auto mb-6 w-32"/>
+                <h2 class="font-heading text-3xl font-bold mb-4">Hydrogen Production Analysis</h2>
+                <p class="text-gray-600 text-lg mb-8">Search for a location or click on the map to analyze green hydrogen production potential</p>
+            </div>
+
+            <div id="dashboard-loading" class="max-w-4xl mx-auto hidden text-center py-16">
+                <div class="spinner mx-auto mb-4" style="width: 3rem; height: 3rem;"></div>
+                <p class="text-xl font-semibold text-gray-700">Analyzing Geospatial Data...</p>
+            </div>
+
+            <div id="dashboard-results" class="max-w-4xl mx-auto hidden">
+                <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                        <div>
+                            <h2 class="font-heading text-2xl font-bold">Analysis Results</h2>
+                            <p id="location-coords" class="text-gray-500 text-sm mt-1"></p>
+                        </div>
+                        <div class="mt-4 md:mt-0">
+                            <button id="generate-report-btn" class="btn btn-primary flex items-center justify-center">
+                                <span>Generate Detailed Report</span>
+                                <svg id="report-loading" class="hidden animate-spin ml-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Feasibility Score -->
+                        <div class="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
+                            <h3 class="font-heading text-sm font-semibold text-gray-500 mb-2">OVERALL FEASIBILITY</h3>
+                            <p id="feasibility-score" class="font-heading text-6xl font-bold text-earth-blue">0%</p>
+                        </div>
+
+                        <!-- Recommended Technology -->
+                        <div class="p-6 bg-gray-50 rounded-lg border border-gray-200">
+                            <h3 class="font-heading text-sm font-semibold text-gray-500 mb-3">RECOMMENDED TECHNOLOGY</h3>
+                            <div id="tech-recommendation-badge" class="inline-flex items-center font-bold text-lg px-4 py-2 rounded-full bg-earth-blue text-white"></div>
+                        </div>
+                    </div>
+
+                    <!-- Suitability Scores -->
+                    <div class="mt-8">
+                        <h3 class="font-heading text-lg font-semibold text-gray-700 mb-4">SUITABILITY SCORES</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="scorecard p-4 bg-white rounded-lg border border-gray-200">
+                                <div class="flex items-center mb-3">
+                                    <img src="https://img.icons8.com/fluency/32/sun.png" alt="Sun Icon" class="mr-3"/>
+                                    <span class="font-semibold text-charcoal-dark">Solar Electrolysis</span>
+                                    <span id="solar-score-value" class="ml-auto font-bold text-lg"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div id="solar-score-bar" class="bg-solar-yellow h-2.5 rounded-full score-bar"></div>
+                                </div>
+                            </div>
+                            <div class="scorecard p-4 bg-white rounded-lg border border-gray-200">
+                                <div class="flex items-center mb-3">
+                                    <img src="https://img.icons8.com/fluency/32/wind.png" alt="Wind Icon" class="mr-3"/>
+                                    <span class="font-semibold text-charcoal-dark">Wind Electrolysis</span>
+                                    <span id="wind-score-value" class="ml-auto font-bold text-lg"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div id="wind-score-bar" class="bg-sky-cyan h-2.5 rounded-full score-bar"></div>
+                                </div>
+                            </div>
+                            <div class="scorecard p-4 bg-white rounded-lg border border-gray-200">
+                                <div class="flex items-center mb-3">
+                                    <img src="https://img.icons8.com/fluency/32/factory.png" alt="Factory Icon" class="mr-3"/>
+                                    <span class="font-semibold text-charcoal-dark">Thermal with CCS</span>
+                                    <span id="thermal-score-value" class="ml-auto font-bold text-lg"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div id="thermal-score-bar" class="bg-volcanic-orange h-2.5 rounded-full score-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Production Projection -->
+                    <div class="mt-8">
+                        <h3 class="font-heading text-lg font-semibold text-gray-700 mb-4">PRODUCTION PROJECTION</h3>
+                        <div class="bg-white p-4 rounded-lg border border-gray-200">
+                            <canvas id="projectionChart" height="150"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Regional Advantages -->
+                    <div class="mt-8">
+                        <h3 class="font-heading text-lg font-semibold text-gray-700 mb-4">REGIONAL ADVANTAGES</h3>
+                        <div class="bg-white p-6 rounded-lg border border-gray-200">
+                            <ul id="policy-advantages-list" class="space-y-3 text-md"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Section -->
+                <div id="report-section" class="bg-white rounded-xl shadow-lg p-8 hidden">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                        <h3 class="font-heading text-2xl font-bold">AI Analysis Report</h3>
+                        <button id="download-report" class="btn btn-secondary mt-4 md:mt-0 flex items-center opacity-50 cursor-not-allowed" disabled>
+    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+    </svg>
+    Download Report
+</button>
+                    </div>
+                    
+                    <!-- Report Search Bar -->
+                    <div class="relative mb-6">
+                        <input type="text" id="report-search-input" placeholder="Ask additional questions about this location..." class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-earth-blue text-lg">
+                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    
+                    <div id="report-container" class="report-container border border-gray-200 rounded-lg p-6 max-h-96 overflow-y-auto">
+                        <div id="report-content" class="prose prose-lg max-w-none">
+                            <div id="report-generating" class="hidden text-center py-8 generating-report">
+                                <div class="spinner mx-auto mb-4" style="width: 3rem; height: 3rem;"></div>
+                                <p class="text-gray-700 font-semibold text-lg">Generating comprehensive analysis...</p>
+                            </div>
+                            <div id="report-output"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="mobile-menu" class="hidden md:hidden">
+        <a href="{{ url_for('index_bp.index') }}" class="block text-white text-center py-2">Home</a>
+        <a href="{{ url_for('map_bp.map') }}" class="block text-white text-center py-2">Map</a>
+        <a href="{{ url_for('community_bp.community') }}" class="block text-white text-center py-2">Community</a>
+        <a href="{{ url_for('suggestions_bp.suggestions') }}" class="block text-white text-center py-2">Suggestions</a>
+        <div class="py-2">
+            <a href="{{ url_for('login_bp.login') }}" class="block w-1/2 mx-auto btn btn-secondary text-sm" style="background-color: rgba(255,255,255,0.2); color: white; border-color: white;">Sign In</a>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/main.js"></script>
+    <script src="/static/map.js"></script>
+</body>
+</html>

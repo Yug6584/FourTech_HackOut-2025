@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terragen - Optimal Hydrogen Hubs</title>
+    <style>
+        /* body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f9f9f9; }
+        .header { background-color: #1a3c44; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header a { color: white; text-decoration: none; margin: 0 15px; }
+        .header .logo { font-size: 24px; font-weight: bold; }
+        .title { text-align: center; margin: 20px 0; }
+        .title h1 { font-size: 2.5em; margin: 0; }
+        .title p { color: #666; font-size: 1.1em; } */
+        .state-filter-btn { padding: 10px 20px; border: none; background-color: #e0e0e0; cursor: pointer; border-radius: 20px; margin: 0 5px; }
+        .state-filter-btn.active { background-color: #1a3c44; color: white; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .hub-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .score-badge { background: #e0f7fa; color: #00796b; padding: 5px 10px; border-radius: 10px; }
+        .advantage-tag { background: #e0f7fa; padding: 5px 10px; border-radius: 15px; color: #00796b; }
+        .btn-primary { background: #1a3c44; color: white; padding: 10px; text-align: center; display: block; text-decoration: none; border-radius: 25px; }
+        .detailed-card { display: none; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 20px; }
+        .detailed-card.active { display: block; }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-off-white text-charcoal font-body">
+
+    <header class="sticky top-0 z-50 bg-header-gradient shadow-sm">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <a href="index.html" class="flex items-center space-x-2">
+                <img src="/static/logo.jpg" alt="Terragen Logo" class="h-12">
+                <span class="font-heading text-2xl font-bold text-white">Terragen</span>
+            </a>
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="{{ url_for('index_bp.index') }}" class="nav-link-light active">Home</a>
+                <a href="{{ url_for('map_bp.map') }}" class="nav-link-light">Map</a>
+                <a href="{{ url_for('community_bp.community') }}" class="nav-link-light">Community</a>
+                <a href="{{ url_for('suggestions_bp.suggestions') }}" class="nav-link-light">Suggestions</a>
+            </nav>
+            <!-- User / Auth Buttons -->
+        <ul class="hidden md:flex items-center space-x-2">
+            {% if session.get('logged_in') %}
+                <li class="relative">
+                    <img id="user-avatar" src="{{ session.get('user_picture') or '/static/default-user.png' }}" 
+                         alt="User" class="w-10 h-10 rounded-full cursor-pointer">
+                    <div id="dropdown-menu" class="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg hidden">
+                        <a href="{{ url_for('auth_bp.logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+                    </div>
+                </li>
+            {% else %}
+                <li><a href="{{ url_for('login_bp.login') }}" class="btn btn-secondary">Sign In</a></li>
+                <li><a href="{{ url_for('signup_bp.signup') }}" class="btn btn-primary-outline">Sign Up</a></li>
+            {% endif %}
+        </ul>
+            <button id="mobile-menu-button" class="md:hidden text-2xl">☰</button>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden bg-white shadow-lg">
+            <a href="{{ url_for('index_bp.index') }}" class="block px-6 py-3 text-center font-semibold">Home</a>
+            <a href="{{ url_for('map_bp.map') }}" class="block px-6 py-3 text-center font-semibold">Map</a>
+            <a href="{{ url_for('community_bp.community') }}" class="block px-6 py-3 text-center font-semibold">Community</a>
+            <a href="{{ url_for('suggestions_bp.suggestions') }}" class="block px-6 py-3 text-center font-semibold">Suggestions</a>
+            <!-- <a href="#" class="block px-6 py-3 text-center font-semibold">Contact</a> -->
+                <div class="hidden md:flex items-center space-x-2">
+                 {% if session.get('logged_in') %}
+            <a href="{{ url_for('auth_bp.logout') }}" class="block px-6 py-3 text-center font-semibold">Logout</a>
+        {% else %}
+            <a href="{{ url_for('login_bp.login') }}" class="block px-6 py-3 text-center font-semibold">Sign In</a>
+            <a href="{{ url_for('signup_bp.signup') }}" class="block px-6 py-3 text-center font-semibold">Sign Up</a>
+        {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-16">
+        <div class="text-center max-w-3xl mx-auto">
+            <h1 class="font-heading text-5xl font-bold mb-4">Optimal Hydrogen Hubs</h1>
+            <p class="text-lg text-gray-600 mb-12">Discover the most strategic locations for green hydrogen facilities across India's key industrial states.</p>
+        </div>
+
+<div class="flex justify-center space-x-2 mb-12">
+        <button class="state-filter-btn active" onclick="filterState('Gujarat')">Gujarat</button>
+        <button class="state-filter-btn" onclick="filterState('Maharashtra')">Maharashtra</button>
+        <button class="state-filter-btn" onclick="filterState('Tamil Nadu')">Tamil Nadu</button>
+        <button class="state-filter-btn" onclick="filterState('Odisha')">Odisha</button>
+        <button class="state-filter-btn" onclick="filterState('Uttar Pradesh')">Uttar Pradesh</button>
+    </div>
+
+    <div class="grid" id="hubGrid">
+        <!-- Gujarat Hubs -->
+        <div class="hub-card" data-state="Gujarat">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Kutch District</h2>
+                <div class="score-badge">★ 92</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Excellent solar irradiation and large land availability.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Solar Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Wind Electrolysis</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">High solar potential</span>
+                    <span class="advantage-tag">Coastal access</span>
+                    <span class="advantage-tag">Industrial infrastructure</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('kutch')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="kutch-details">
+                <h3>Detailed Analysis for Kutch District</h3>
+                <p>Additional data: Avg. solar irradiation: 5.8 kWh/m²/day. Land Bank: 45,652 sq km with 2,500 sq km designated for industrial use. Water Source: Proposed 15 MLD (Million Liters per Day) desalination plant. Port Proximity: 85 km from Kandla Port (capacity: 130 MTPA). Grid Infrastructure: 400 kV substation within 30 km. Policy: Qualifies for 25% capital subsidy under Gujarat's Green Hydrogen Policy. Demand: Proximity to 12 major chemical and fertilizer plants with estimated demand of 150 TPD (Tons per Day).</p>
+            </div>
+        </div>
+
+        <div class="hub-card" data-state="Gujarat">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Jamnagar Coast</h2>
+                <div class="score-badge">★ 88</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Strong wind patterns and existing petrochemical infrastructure.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Wind Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Solar Electrolysis</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">Consistent wind speeds</span>
+                    <span class="advantage-tag">Port connectivity</span>
+                    <span class="advantage-tag">Refinery integration</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('jamnagar')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="jamnagar-details">
+                <h3>Detailed Analysis for Jamnagar Coast</h3>
+                <p>Additional data: Avg. wind speed: 7.8 m/s at 100m hub height. Synergy: Adjacent to world's largest refining complex (68 MTPA capacity). Port: Jamnagar Port capable of handling cryogenic vessels for hydrogen export. Water: Existing 25 MLD desalination capacity. Workforce: Over 8,000 technicians with oil & gas experience. Export Potential: Direct shipping routes to Middle East and Europe. Estimated project cost: $1.8B with 6-year payback period.</p>
+            </div>
+        </div>
+
+        <div class="hub-card" data-state="Gujarat">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Anjar Industrial Zone</h2>
+                <div class="score-badge">★ 85</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Strategic location with grid connectivity and policy support.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Solar Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Thermal with CCS</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">Grid infrastructure</span>
+                    <span class="advantage-tag">Government support</span>
+                    <span class="advantage-tag">Water availability</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('anjar')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="anjar-details">
+                <h3>Detailed Analysis for Anjar Industrial Zone</h3>
+                <p>Additional data: Grid Reliability: 99.7% uptime with dual redundant feeders. Water Management: 80% water recycling mandate for all units. Labor: 15,000+ skilled workers within 50km radius. Logistics: Direct access to NH-8 and Dedicated Freight Corridor (DFC). Pipeline: 120km of existing pipeline network that can be retrofitted for H2. Expansion: 1,200 hectares of contiguous land available for Giga-scale projects.</p>
+            </div>
+        </div>
+
+        <!-- Maharashtra Hubs -->
+        <div class="hub-card" data-state="Maharashtra">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Ratnagiri Coast</h2>
+                <div class="score-badge">★ 87</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Robust wind resources and proximity to industrial zones.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Wind Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Solar Electrolysis</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">Consistent wind speeds</span>
+                    <span class="advantage-tag">Port connectivity</span>
+                    <span class="advantage-tag">Industrial proximity</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('ratnagiri')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="ratnagiri-details">
+                <h3>Detailed Analysis for Ratnagiri Coast</h3>
+                <p>Additional data: Offshore Wind: Identified potential of 2.5 GW within 50 km. Port: Natural depth of 18m, suitable for Capesize vessels. Demand Cluster: 3 major chemical zones (Lote, Patalganga, Roha) within 100km. Water Security: High rainfall (3,200mm annually). Transmission: New 765 kV transmission line under construction, enabling 2 GW evacuation. Tourism Synergy: Potential for "Green Hydrogen Valley" demonstration project.</p>
+            </div>
+        </div>
+
+        <div class="hub-card" data-state="Maharashtra">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Pune Industrial Area</h2>
+                <div class="score-badge">★ 84</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Strong industrial base and renewable energy potential.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Solar Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Wind Electrolysis</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">High solar potential</span>
+                    <span class="advantage-tag">Industrial infrastructure</span>
+                    <span class="advantage-tag">Government support</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('pune')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="pune-details">
+                <h3>Detailed Analysis for Pune Industrial Area</h3>
+                <p>Additional data: R&D Hub: 15 research institutions (e.g., NCL) focused on cleantech. Demand: 45% of India's automotive manufacturing base. Talent: 12 engineering colleges producing 5,000+ engineers annually. Startup Ecosystem: 80+ cleantech startups. Corporate PPAs: 8 Fortune 500 companies with 100% renewable targets. Land Constraint: Limited space; recommends rooftop solar + offsite PPA model.</p>>
+            </div>
+        </div>
+
+        <div class="hub-card" data-state="Maharashtra">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Nashik Region</h2>
+                <div class="score-badge">★ 82</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Emerging hub with water and land resources.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Solar Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Thermal with CCS</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">High solar potential</span>
+                    <span class="advantage-tag">Water availability</span>
+                    <span class="advantage-tag">Land resources</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('nashik')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="nashik-details">
+                <h3>Detailed Analysis for Nashik Region</h3>
+                <p>Additional data: Solar Potential: 2900 sunshine hours with 5.4 kWh/m²/day irradiation. Water: Godavari River provides sustainable source (allocation of 8 MLD approved). Land Cost: 40% lower than Pune/Mumbai. Agriculture Synergy: Potential for green ammonia for fertilizers. Tourism: "Wine Capital" brand can be leveraged for green tourism. Challenge: Requires strengthening of transmission infrastructure.</p>
+            </div>
+        </div>
+
+        <!-- Tamil Nadu Hubs -->
+        <div class="hub-card" data-state="Tamil Nadu">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Tuticorin Port</h2>
+                <div class="score-badge">★ 86</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Strategic port with renewable energy potential.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Wind Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Solar Electrolysis</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">Consistent wind speeds</span>
+                    <span class="advantage-tag">Port connectivity</span>
+                    <span class="advantage-tag">Industrial infrastructure</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('tuticorin')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="tuticorin-details">
+                <h3>Detailed Analysis for Tuticorin Port</h3>
+                <p>Additional data: Strategic Location: On international shipping routes; 3rd largest port in India (60 MTPA). Wind Power: Home to 1.5 GW of existing wind capacity. Industry: Major Tuticorin Alkali Chemicals and SPIC plant present. Desalination: 65 MLD plant ensures water security. Policy: TN has a separate energy policy promoting renewables. Employment: Potential to generate 4,500 direct jobs in a depressed economic region.</p>
+            </div>
+        </div>
+
+        <div class="hub-card" data-state="Tamil Nadu">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Coimbatore Area</h2>
+                <div class="score-badge">★ 83</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Industrial hub with solar potential.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Solar Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Wind Electrolysis</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">High solar potential</span>
+                    <span class="advantage-tag">Industrial infrastructure</span>
+                    <span class="advantage-tag">Government support</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('coimbatore')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="coimbatore-details">
+                <h3>Detailed Analysis for Coimbatore Area</h3>
+                <p>Additional data: "Pump City": Hub for engineering and manufacturing, ideal for H2 equipment supply chain. Wind: Palakkad pass offers excellent wind resources; 2 GW already installed. Textile Demand: Large textile industry seeking to decarbonize thermal operations. Educational Hub: Amrita University and others provide R&D support. Skill Development: Govt. ITI can be leveraged for technician training. Land: Available in surrounding districts like Tirupur.</p>
+            </div>
+        </div>
+
+        <div class="hub-card" data-state="Tamil Nadu">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Madurai Region</h2>
+                <div class="score-badge">★ 81</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Emerging area with land and water resources.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Solar Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Thermal with CCS</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">High solar potential</span>
+                    <span class="advantage-tag">Water availability</span>
+                    <span class="advantage-tag">Land resources</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('madurai')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="madurai-details">
+                <h3>Detailed Analysis for Madurai Region</h3>
+                <p>Additional data: Solar Parks: 2 GW of solar parks planned in Ramanathapuram and Theni districts. Water: Vaigai River and proposed check dams ensure supply. Cultural Hub: High visibility for pilot projects and public acceptance. Demand: Growing industrial corridor along Madurai-Thoothukudi highway. Connectivity: International Airport enables easy access for experts. Labor: Cost-effective and abundant semi-skilled labor force.</p>
+            </div>
+        </div>
+
+        <!-- Odisha Hubs -->
+        <div class="hub-card" data-state="Odisha">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Paradip Port</h2>
+                <div class="score-badge">★ 85</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Key port with industrial and renewable potential.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Wind Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Solar Electrolysis</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">Consistent wind speeds</span>
+                    <span class="advantage-tag">Port connectivity</span>
+                    <span class="advantage-tag">Industrial infrastructure</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('paradip')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="paradip-details">
+                <h3>Detailed Analysis for Paradip Port</h3>
+                <p>Additional data: Deep-Draft Port: Handles Capesize vessels; designated for energy imports/exports. Steel Cluster: Home to POSCO, JSW, and SAIL plants (demand for green steel). Pipeline Corridors: Existing gas/oil pipelines can be repurposed. Policy: Odisha's Industrial Policy offers 30% subsidy on land cost. Water: Mahanadi River provides ample resources. Special Economic Zone (SEZ): 1,000 acres available for plug-and-play development.</p>
+            </div>
+        </div>
+
+        <div class="hub-card" data-state="Odisha">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Bhutaneshwar Area</h2>
+                <div class="score-badge">★ 82</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Growing industrial and solar potential.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Solar Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Wind Electrolysis</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">High solar potential</span>
+                    <span class="advantage-tag">Industrial infrastructure</span>
+                    <span class="advantage-tag">Government support</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('bhutaneshwar')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="bhutaneshwar-details">
+                <h3>Detailed Analysis for Bhutaneshwar Area</h3>
+                <p>Additional data: Smart City: Robust digital and physical infrastructure. Administrative Capital: Ease of doing business and single-window clearance. Talent: IIT Bhubaneswar and NIT Rourkela focus on metallurgy and energy. Demand: Government bus fleet and city infrastructure targeted for green H2. Logistics: Well-connected by rail, road, and air. Investment: Identified as a priority sector in state vision 2030.</p>
+            </div>
+        </div>
+
+        <div class="hub-card" data-state="Odisha">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Sambalpur Region</h2>
+                <div class="score-badge">★ 80</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Land and water resources with growth potential.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Solar Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Thermal with CCS</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">High solar potential</span>
+                    <span class="advantage-tag">Water availability</span>
+                    <span class="advantage-tag">Land resources</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('sambalpur')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="sambalpur-details">
+                <h3>Detailed Analysis for Sambalpur Region</h3>
+                <p>Additional data: Hydropower: Backbone of eastern grid; 2,000 MW Hirakud Dam provides stable power. Mineral Rich: Access to iron ore, bauxite; potential for green metallurgy. Land Bank: Vast tracts of government-owned non-forest land available. Water: Hirakud Reservoir offers virtually unlimited supply. Tribal Development: Project can bring inclusive growth to underdeveloped region. Challenge: Needs development of technical skill ecosystem.</p>
+            </div>
+        </div>
+
+        <!-- Uttar Pradesh Hubs -->
+        <div class="hub-card" data-state="Uttar Pradesh">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Noida Industrial Hub</h2>
+                <div class="score-badge">★ 84</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Major industrial zone with grid support.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Solar Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Wind Electrolysis</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">Grid infrastructure</span>
+                    <span class="advantage-tag">Government support</span>
+                    <span class="advantage-tag">Industrial infrastructure</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('noida')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="noida-details">
+                <h3>Detailed Analysis for Noida Industrial Hub</h3>
+                <p>Additional data: Demand Center: Proximity to NCR, a massive transport and industrial fuel market. Policy: UP's Bioenergy Policy offers banking and wheeling of renewable power. Infrastructure: World-class roads, power, and fiber optic connectivity. Corporate HQs: Ideal for R&D and corporate offices for H2 companies. Mobility Focus: Target for hydrogen fuel cell buses for city transport. Land Premium: High cost, suitable for HQ, not large production.</p>
+            </div>
+        </div>
+
+        <div class="hub-card" data-state="Uttar Pradesh">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Lucknow Region</h2>
+                <div class="score-badge">★ 81</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Emerging area with policy and land support.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Solar Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Thermal with CCS</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">High solar potential</span>
+                    <span class="advantage-tag">Government support</span>
+                    <span class="advantage-tag">Land resources</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('lucknow')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="lucknow-details">
+                <h3>Detailed Analysis for Lucknow Region</h3>
+                <p>Additional data: Government Support: Capital city advantage with strong political will. Agriculture Demand: Potential for green ammonia to replace urea in India's largest grain belt. Purvanchal Expressway: Opens up logistics for eastern districts. Defense Corridor: Kanpur node can utilize green H2 for manufacturing. Solar Potential: ~5.0 kWh/m²/day. Pilot Projects: Ideal for state-supported pilot projects for H2 in agriculture.</p>
+            </div>
+        </div>
+
+        <div class="hub-card" data-state="Uttar Pradesh">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="font-heading text-2xl font-semibold">Agra Area</h2>
+                <div class="score-badge">★ 79</div>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">Tourism and industrial growth area.</p>
+            <div class="mb-4">
+                <p class="text-sm"><span class="font-semibold">Primary:</span> Solar Electrolysis</p>
+                <p class="text-sm text-gray-500"><span class="font-semibold">Secondary:</span> Wind Electrolysis</p>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold text-sm mb-2">Key Advantages:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <span class="advantage-tag">High solar potential</span>
+                    <span class="advantage-tag">Industrial infrastructure</span>
+                    <span class="advantage-tag">Water availability</span>
+                </div>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="toggleDetails('agra')">View Detailed Analysis →</a>
+            <div class="detailed-card" id="agra-details">
+                <h3>Detailed Analysis for Agra Area</h3>
+                <p>Additional data: Tourism Decarbonization: Target for green hydrogen to power the Taj Mahal's infrastructure and tourist vehicles. Heritage Status: Global brand value can attract international green funding. Yamuna Expressway: Connects to Noida and Lucknow, creating a demand corridor. Solar: Identified as a solar city by MNRE. Water Challenge: Dependent on Yamuna river; requires advanced water recycling. Soft Power: A successful project here would have immense symbolic value.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filterState(state) {
+            const buttons = document.querySelectorAll('.state-filter-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.state-filter-btn[onclick="filterState('${state}')"]`).classList.add('active');
+
+            const cards = document.querySelectorAll('.hub-card');
+            cards.forEach(card => {
+                if (card.getAttribute('data-state') === state) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function toggleDetails(id) {
+            const details = document.getElementById(`${id}-details`);
+            details.classList.toggle('active');
+        }
+
+        // Load Gujarat by default
+        filterState('Gujarat');
+    </script>
+    </main>
+
+    <script src="./static/main.js"></script>
+</body>
+</html>

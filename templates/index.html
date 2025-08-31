@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terragen - Generate the Future of Energy</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> 
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-white text-charcoal font-body">
+
+    <header class="sticky top-0 z-50 bg-header-gradient shadow-sm">
+    <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+        <a href="{{ url_for('index_bp.index') }}" class="flex items-center space-x-2">
+            <img src="/static/logo.jpg" alt="Terragen Logo" class="h-12">
+            <span class="font-heading text-2xl font-bold text-white">Terragen</span>
+        </a>
+
+        <!-- Desktop Menu -->
+        <nav class="hidden md:flex items-center space-x-8">
+                <a href="{{ url_for('index_bp.index') }}" class="nav-link-light active">Home</a>
+                <a href="{{ url_for('map_bp.map') }}" class="nav-link-light">Map</a>
+                <a href="{{ url_for('community_bp.community') }}" class="nav-link-light">Community</a>
+                <a href="{{ url_for('suggestions_bp.suggestions') }}" class="nav-link-light">Suggestions</a>
+            </nav>
+
+        <!-- User / Auth Buttons -->
+        <ul class="hidden md:flex items-center space-x-2">
+            {% if session.get('logged_in') %}
+                <li class="relative">
+                    <img id="user-avatar" src="{{ session.get('user_picture') or '/static/default-user.png' }}" 
+                         alt="User" class="w-10 h-10 rounded-full cursor-pointer">
+                    <div id="dropdown-menu" class="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg hidden">
+                        <a href="{{ url_for('auth_bp.logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+                    </div>
+                </li>
+            {% else %}
+                <li><a href="{{ url_for('login_bp.login') }}" class="btn btn-secondary">Sign In</a></li>
+                <li><a href="{{ url_for('signup_bp.signup') }}" class="btn btn-primary-outline">Sign Up</a></li>
+            {% endif %}
+        </ul>
+
+        <!-- Mobile Menu Button -->
+        <button id="mobile-menu-button" class="md:hidden text-2xl">☰</button>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-white shadow-lg">
+        <a href="{{ url_for('index_bp.index') }}" class="block px-6 py-3 text-center font-semibold">Home</a>
+        <a href="{{ url_for('map_bp.map') }}" class="block px-6 py-3 text-center font-semibold">Map</a>
+        <a href="{{ url_for('community_bp.community') }}" class="block px-6 py-3 text-center font-semibold">Community</a>
+        <a href="{{ url_for('suggestions_bp.suggestions') }}" class="block px-6 py-3 text-center font-semibold">Suggestions</a>
+        <!-- <a href="#" class="block px-6 py-3 text-center font-semibold">Contact</a> -->
+
+        {% if session.get('logged_in') %}
+            <a href="{{ url_for('auth_bp.logout') }}" class="block px-6 py-3 text-center font-semibold">Logout</a>
+        {% else %}
+            <a href="{{ url_for('login_bp.login') }}" class="block px-6 py-3 text-center font-semibold">Sign In</a>
+            <a href="{{ url_for('signup_bp.signup') }}" class="block px-6 py-3 text-center font-semibold">Sign Up</a>
+        {% endif %}
+    </div>
+
+    <!-- JS for dropdown and mobile toggle -->
+    <script>
+        const avatar = document.getElementById('user-avatar');
+        const menu = document.getElementById('dropdown-menu');
+        const mobileBtn = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        if(avatar && menu) {
+            avatar.addEventListener('click', () => menu.classList.toggle('hidden'));
+            document.addEventListener('click', (e) => {
+                if(!avatar.contains(e.target) && !menu.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+        }
+
+        if(mobileBtn && mobileMenu) {
+            mobileBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+        }
+    </script>
+</header>
+
+    <main>
+        <section class="relative h-screen flex items-center bg-grid-pattern ">
+            <div class="container mx-auto px-6 z-10 text-center">
+                <h1 class="font-heading text-5xl md:text-7xl font-bold text-charcoal-dark leading-tight mb-4 animate-fade-in-up">
+                    Generate the <span class="text-gradient">Future</span> of Energy
+                </h1>
+                <p class="text-lg md:text-xl text-charcoal max-w-3xl mx-auto mb-8 animate-fade-in-up" style="animation-delay: 0.2s;">
+                    Terragen: The AI platform mapping the optimal path for a scalable green hydrogen ecosystem.
+                </p>
+                <div class="flex justify-center items-center space-x-4 animate-fade-in-up" style="animation-delay: 0.4s;">
+                    <a href="{{ url_for('map_bp.map') }}" class="btn btn-primary">Launch Map <span class="arrow">→</span></a>
+                    <a href="#" class="btn btn-secondary">Watch Demo</a>
+                </div>
+                <p class="text-sm text-gray-400 mt-8 animate-fade-in-up" style="animation-delay: 0.6s;">Trusted by leading energy companies and research institutions worldwide</p>
+            </div>
+        </section>
+
+        <section class="bg-off-white py-20">
+            <div class="container mx-auto px-6 text-center">
+                <h2 class="font-heading text-4xl font-bold mb-4">Mapping the Genesis of Green Hydrogen</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-12">Our AI-powered platform transforms complex geospatial data into actionable insights for sustainable energy development.</p>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="feature-card bg-white p-8 rounded-xl border border-gray-200">
+                        <div class="icon-box"><img src="https://img.icons8.com/fluency/48/brain.png" alt="Brain Icon"/></div>
+                        <h3 class="font-heading text-2xl font-semibold mb-2">AI-Powered Site Analysis</h3>
+                        <p>Advanced algorithms analyze geological, meteorological, and economic data to identify optimal hydrogen production locations.</p>
+                    </div>
+                    <div class="feature-card bg-white p-8 rounded-xl border border-gray-200 active">
+                        <div class="icon-box"><img src="https://img.icons8.com/fluency/48/bullish.png" alt="Graph Icon"/></div>
+                        <h3 class="font-heading text-2xl font-semibold mb-2">Economic & Policy Forecasting</h3>
+                        <p>Real-time projections of production costs, market trends, and regulatory impacts from 2025 to 2050.</p>
+                    </div>
+                    <div class="feature-card bg-white p-8 rounded-xl border border-gray-200">
+                        <div class="icon-box"><img src="\static\icons8-investment-96.png" alt="Idea Icon"/></div>
+                        <h3 class="font-heading text-2xl font-semibold mb-2">Strategic Investment Insights</h3>
+                        <p>Comprehensive reports with actionable recommendations for sustainable hydrogen infrastructure development.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white py-20">
+            <div class="container mx-auto px-6 text-center">
+                <h2 class="font-heading text-4xl font-bold mb-4">Government Support & Policy Framework</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-12">Comprehensive policy support and incentives driving India's green hydrogen revolution.</p>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="policy-card">
+                        <h3 class="font-heading text-xl font-semibold mb-2">National Green Hydrogen Mission</h3>
+                        <p class="text-gray-600 text-sm mb-4">₹19,744 crore allocation for green hydrogen production and export hub development.</p>
+                        <div class="policy-tag">Production Linked Incentive (PLI) Scheme</div>
+                    </div>
+                    <div class="policy-card">
+                        <h3 class="font-heading text-xl font-semibold mb-2">State-Level Hydrogen Policies</h3>
+                        <p class="text-gray-600 text-sm mb-4">Gujarat, Rajasthan, and Odisha leading with dedicated hydrogen policies and land allocations.</p>
+                        <div class="policy-tag">Land subsidies up to 50%</div>
+                    </div>
+                    <div class="policy-card">
+                        <h3 class="font-heading text-xl font-semibold mb-2">Renewable Energy Integration</h3>
+                        <p class="text-gray-600 text-sm mb-4">Mandatory renewable energy integration for hydrogen production facilities.</p>
+                        <div class="policy-tag">Tax benefits for 10 years</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-off-white py-20">
+            <div class="container mx-auto px-6 text-center">
+                <h2 class="font-heading text-4xl font-bold mb-4">Ready to Shape the Future of Clean Energy?</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-8">Join industry leaders in mapping the optimal path to a sustainable hydrogen economy.</p>
+                <div class="flex justify-center items-center space-x-4">
+                    <a href="{{ url_for('map_bp.map') }}" class="btn btn-primary">Start Exploring</a>
+                    <a href="{{ url_for('suggestions_bp.suggestions') }}" class="btn btn-secondary">Get Suggestions</a>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <script src="/static/main.js"></script>
+</body>
+</html>
